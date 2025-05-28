@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>편의점 가격 비교</title>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* 기본 스타일 */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      color: #333;
+      margin: 20px;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    /* 다크모드 */
+    body.dark {
+      background-color: #121212;
+      color: #eee;
+    }
+
+    /* 검색창 */
+    input[type="text"] {
+      padding: 10px;
+      width: 250px;
+      max-width: 100%;
+      border: 2px solid #4e79a7;
+      border-radius: 8px;
+      font-size: 16px;
+      transition: border-color 0.3s ease, background-color 0.3s ease, color 0.3s ease;
+      margin-bottom: 10px;
+    }
+
+    body.dark input[type="text"] {
+      background-color: #333;
+      color: #eee;
+      border-color: #1f618d;
+    }
+
+    /* 버튼 */
+    button {
+      padding: 10px 20px;
+      margin-left: 10px;
+      border: none;
+      border-radius: 8px;
+      background-color: #4e79a7;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #3a5d7a;
+    }
+
+    body.dark button {
+      background-color: #1f618d;
+    }
+
+    body.dark button:hover {
+      background-color: #154b6c;
+    }
+
+    /* 테이블 */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background-color: white;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    body.dark table {
+      background-color: #222;
+      color: #ddd;
+      box-shadow: 0 0 12px rgba(255,255,255,0.1);
+    }
+
+    th, td {
+      padding: 12px 15px;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+      transition: border-color 0.3s ease;
+    }
+
+    body.dark th, body.dark td {
+      border-color: #444;
+    }
+
+    th {
+      background-color: #4e79a7;
+      color: white;
+      font-weight: bold;
+    }
+
+    body.dark th {
+      background-color: #1f618d;
+    }
+
+    /* 베스트 딜 */
+    #bestDeal {
+      max-width: 800px;
+      margin: 20px auto;
+      font-weight: bold;
+      font-size: 1.1rem;
+      color: #4e79a7;
+      transition: color 0.3s ease;
+    }
+
+    body.dark #bestDeal {
+      color: #81a1c1;
+    }
+
+    /* 캔버스 스타일 */
+    #priceChart {
+      display: block;
+      max-width: 800px;
+      height: 400px;
+      margin: 40px auto;
+      background-color: white;
+      border-radius: 12px;
+      transition: background-color 0.3s ease;
+    }
+
+    body.dark #priceChart {
+      background-color: #222;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>편의점 가격 비교</h1>
+
+  <input type="text" id="searchInput" placeholder="상품명 검색..." />
+
+  <button id="darkModeBtn">다크모드 토글</button>
+
+  <table id="productTable">
+    <thead>
+      <tr>
+        <th>상품명</th>
+        <th>GS25</th>
+        <th>7ELEVEN</th>
+        <th>CU</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <div id="bestDeal"></div>
+
+  <canvas id="priceChart" width="800" height="400"></canvas>
+
+  <script>
+const products = [
+  { name: "콜라", GS25: 1500, ELEVEN: 1400, CU: 1600 },
+  { name: "사이다", GS25: 1500, ELEVEN: 1400, CU: 1600 },
+  { name: "감자칩", GS25: 1200, ELEVEN: 1100, CU: 1150 },
+  { name: "초코바", GS25: 900, ELEVEN: 950, CU: 850 },
+  { name: "커피", GS25: 2000, ELEVEN: 2100, CU: 2050 },
+  { name: "샌드위치", GS25: 3500, ELEVEN: 3400, CU: 3600 },
+  { name: "우유", GS25: 1500, ELEVEN: 1450, CU: 1500 },
+  { name: "바나나우유", GS25: 1200, ELEVEN: 1300, CU: 1250 },
+  { name: "라면", GS25: 1000, ELEVEN: 1100, CU: 1050 },
+  { name: "도시락", GS25: 4500, ELEVEN: 4400, CU: 4600 },
+  { name: "초코우유", GS25: 1100, ELEVEN: 1150, CU: 1200 },
+  { name: "생수", GS25: 1000, ELEVEN: 1000, CU: 1000 },
+  { name: "껌", GS25: 800, ELEVEN: 850, CU: 800 },
+  { name: "에너지바", GS25: 1500, ELEVEN: 1550, CU: 1600 },
+  { name: "요구르트", GS25: 900, ELEVEN: 950, CU: 1000 },
+  { name: "핫도그", GS25: 2500, ELEVEN: 2400, CU: 2600 },
+  { name: "아이스크림", GS25: 1800, ELEVEN: 1700, CU: 1750 },
+  { name: "핸드크림", GS25: 5000, ELEVEN: 4800, CU: 5100 },
+  { name: "샴푸", GS25: 7000, ELEVEN: 6900, CU: 7100 },
+  { name: "마스크팩", GS25: 3000, ELEVEN: 3200, CU: 3100 },
+  { name: "초코우유 스틱", GS25: 1300, ELEVEN: 1350, CU: 1250 },
+  { name: "캔커피", GS25: 1500, ELEVEN: 1450, CU: 1550 },
+  { name: "핫식스", GS25: 2000, ELEVEN: 2100, CU: 2050 },
+  { name: "샐러드", GS25: 4500, ELEVEN: 4400, CU: 4600 },
+  { name: "계란빵", GS25: 1200, ELEVEN: 1250, CU: 1300 },
+  { name: "핫바", GS25: 1300, ELEVEN: 1350, CU: 1400 },
+  { name: "컵라면", GS25: 1300, ELEVEN: 1350, CU: 1250 },
+  { name: "요거트 스무디", GS25: 2500, ELEVEN: 2400, CU: 2600 },
+  { name: "견과류", GS25: 3500, ELEVEN: 3400, CU: 3600 },
+  { name: "과일젤리", GS25: 1500, ELEVEN: 1550, CU: 1600 },
+  { name: "치즈스틱", GS25: 1200, ELEVEN: 1100, CU: 1150 },
+  { name: "아이스트레이", GS25: 900, ELEVEN: 950, CU: 850 },
+  { name: "단무지", GS25: 800, ELEVEN: 850, CU: 800 },
+  { name: "두유", GS25: 1500, ELEVEN: 1450, CU: 1500 },
+  { name: "핸드워시", GS25: 7000, ELEVEN: 6900, CU: 7100 },
+  { name: "바디로션", GS25: 10000, ELEVEN: 9800, CU: 10200 },
+  { name: "비타민C", GS25: 3000, ELEVEN: 3200, CU: 3100 },
+  { name: "물티슈", GS25: 1500, ELEVEN: 1450, CU: 1550 },
+
+  // 여기부터 22개 추가
+  { name: "바나나", GS25: 800, ELEVEN: 850, CU: 830 },
+  { name: "사과", GS25: 1000, ELEVEN: 1050, CU: 1020 },
+  { name: "딸기잼", GS25: 2500, ELEVEN: 2600, CU: 2550 },
+  { name: "꿀", GS25: 5000, ELEVEN: 4900, CU: 5100 },
+  { name: "아몬드", GS25: 6000, ELEVEN: 5900, CU: 6200 },
+  { name: "초콜릿", GS25: 3000, ELEVEN: 3100, CU: 3050 },
+  { name: "핸드타월", GS25: 1500, ELEVEN: 1400, CU: 1550 },
+  { name: "빵", GS25: 1200, ELEVEN: 1250, CU: 1300 },
+  { name: "햄버거", GS25: 4000, ELEVEN: 3900, CU: 4100 },
+  { name: "콜라 제로", GS25: 1500, ELEVEN: 1400, CU: 1500 },
+  { name: "사이다 제로", GS25: 1500, ELEVEN: 1400, CU: 1500 },
+  { name: "비빔밥", GS25: 5000, ELEVEN: 4900, CU: 5200 },
+  { name: "김밥", GS25: 2500, ELEVEN: 2400, CU: 2600 },
+  { name: "샤워젤", GS25: 6000, ELEVEN: 5900, CU: 6200 },
+  { name: "치약", GS25: 3000, ELEVEN: 2900, CU: 3100 },
+  { name: "면도기", GS25: 7000, ELEVEN: 6800, CU: 7100 },
+  { name: "콘서트 티켓", GS25: 80000, ELEVEN: 82000, CU: 81000 },
+  { name: "모바일 쿠폰", GS25: 10000, ELEVEN: 9800, CU: 10200 },
+  { name: "USB 메모리", GS25: 15000, ELEVEN: 14800, CU: 15200 },
+  { name: "충전기", GS25: 20000, ELEVEN: 19800, CU: 20200 },
+  { name: "헤어젤", GS25: 3500, ELEVEN: 3400, CU: 3600 },
+  { name: "손소독제", GS25: 4000, ELEVEN: 3900, CU: 4200 },
+];
+
+    const tbody = document.querySelector("#productTable tbody");
+
+    function displayProducts(filter = "") {
+      tbody.innerHTML = "";
+
+      const filtered = products.filter(p =>
+        p.name.includes(filter)
+      );
+
+      filtered.forEach(p => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td>${p.name}</td>
+          <td>${p.GS25}원</td>
+          <td>${p.ELEVEN}원</td>
+          <td>${p.CU}원</td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      updateBestDeal(filtered);
+      drawChart(filtered);
+    }
+
+    function updateBestDeal(list) {
+      if(list.length === 0) {
+        document.getElementById("bestDeal").textContent = "";
+        return;
+      }
+
+      const p = list[0];
+      const prices = [
+        {store: "GS25", price: p.GS25},
+        {store: "7ELEVEN", price: p.ELEVEN},
+        {store: "CU", price: p.CU}
+      ];
+      prices.sort((a,b) => a.price - b.price);
+
+      const best = prices[0];
+      const diff = prices[1].price - best.price;
+
+      document.getElementById("bestDeal").textContent =
+        `${p.name}는 ${best.store}가 가장 저렴합니다! (${diff}원 더 싸요)`;
+    }
+
+    let chartInstance = null;
+    function drawChart(list) {
+      const ctx = document.getElementById("priceChart").getContext("2d");
+
+      if(chartInstance) {
+        chartInstance.destroy();
+      }
+
+      const labels = list.map(p => p.name);
+      const gs25Prices = list.map(p => p.GS25);
+      const elevenPrices = list.map(p => p.ELEVEN);
+      const cuPrices = list.map(p => p.CU);
+
+      chartInstance = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: "GS25",
+              data: gs25Prices,
+              backgroundColor: "rgba(46, 134, 222, 0.7)"
+            },
+            {
+              label: "7ELEVEN",
+              data: elevenPrices,
+              backgroundColor: "rgba(231, 76, 60, 0.7)"
+            },
+            {
+              label: "CU",
+              data: cuPrices,
+              backgroundColor: "rgba(241, 196, 15, 0.7)"
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 500
+              }
+            }
+          }
+        }
+      });
+    }
+
+    document.getElementById("searchInput").addEventListener("input", e => {
+      displayProducts(e.target.value.trim());
+    });
+
+    document.getElementById("darkModeBtn").addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+    });
+
+    displayProducts();
+  </script>
+</body>
+</html>
